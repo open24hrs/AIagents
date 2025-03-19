@@ -13,7 +13,8 @@ export const myCharacter: Character = {
         'client-direct': {
             enabled: true,
             port: 8080,
-            cors: true
+            cors: true,
+            path: "/api/direct"
         },
         secrets: {},
     },
