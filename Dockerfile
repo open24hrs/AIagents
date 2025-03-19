@@ -30,14 +30,10 @@ WORKDIR /app
 # Install runtime dependencies
 RUN apk add --no-cache python3 make g++
 
-# Install pnpm and PM2
-RUN npm install -g pnpm@9 pm2
-
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY package.json ./
-COPY ecosystem.config.js ./
 
 # Create data directory for database
 RUN mkdir -p /data/db
@@ -50,5 +46,5 @@ ENV ELIZA_DB_PATH=/data/db
 # Expose port that the app will run on
 EXPOSE 8080
 
-# Command to run the application using PM2
-CMD ["pm2-runtime", "ecosystem.config.js"] 
+# Command to run the application directly with Node
+CMD ["node", "dist/index.js"] 
