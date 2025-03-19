@@ -10,6 +10,11 @@ export const myCharacter: Character = {
         '@elizaos/client-direct', // For web client
     ],
     settings: {
+        'client-direct': {
+            enabled: true,
+            port: 3000,
+            cors: true
+        },
         secrets: {},
     },
     system:

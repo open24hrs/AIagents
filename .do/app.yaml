@@ -9,6 +9,8 @@ services:
     http_port: 8080
     routes:
       - path: /
+      - path: /api/direct
+        preserve_path_prefix: true
     health_check:
       http_path: /health
       initial_delay_seconds: 30
