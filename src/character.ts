@@ -14,7 +14,10 @@ export const myCharacter: Character = {
             enabled: true,
             port: 8080,
             cors: true,
-            path: "/api/direct"
+            path: "/api/direct",
+            hostname: "0.0.0.0",
+            timeout: 30000,
+            allowOrigins: ["*"]
         },
         secrets: {},
     },
