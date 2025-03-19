@@ -1,5 +1,19 @@
 import type { Content, IAgentRuntime, Memory, State, TestSuite, UUID } from '@elizaos/core';
-import { v4 as uuidv4 } from 'uuid';
+// Try to import uuid, but have a fallback if it fails
+let uuidv4: () => string;
+try {
+  const uuid = require('uuid');
+  uuidv4 = uuid.v4;
+} catch (e) {
+  // Fallback implementation if uuid module is not available
+  uuidv4 = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+}
 import { character } from './index';
 
 export class StarterTestSuite implements TestSuite {
@@ -43,7 +57,7 @@ export class StarterTestSuite implements TestSuite {
           await runtime.registerPlugin({
             name: 'starter',
             description: 'A starter plugin for Eliza',
-            init: async () => {},
+            init: async () => { },
             config: {},
           });
         } catch (error) {
