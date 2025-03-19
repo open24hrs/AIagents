@@ -1,4 +1,21 @@
 import { logger } from '@elizaos/core';
+import { DirectClient } from '@elizaos/client-direct';
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+// Initialize the DirectClient with configuration
+const elizaClient = new DirectClient({
+    apiKey: process.env.ELIZAOS_API_KEY || '',
+    endpoint: process.env.ELIZAOS_ENDPOINT || '',
+    model: process.env.ELIZAOS_MODEL || '',
+    google: {
+        apiKey: process.env.GOOGLE_API_KEY || '',
+        projectId: process.env.GOOGLE_PROJECT_ID || '',
+        region: process.env.GOOGLE_REGION || ''
+    }
+});
 
 /**
  * This file contains utility functions for connecting our web interface
@@ -7,23 +24,16 @@ import { logger } from '@elizaos/core';
 
 // Response type for message API
 interface MessageResponse {
-    response?: string;
-    error?: string;
-}
-
-// Response type for history API
-interface HistoryResponse {
-    history?: any[];
+    success: boolean;
+    message?: string;
     error?: string;
 }
 
 // Function to send messages to the direct client
 export async function connectToElizaOSAgent(): Promise<boolean> {
     try {
-        // Check if the direct client is available
-        const baseUrl = '/api/direct';
-        const response = await fetch(`${baseUrl}/status`);
-        if (response.ok) {
+        const status = await elizaClient.getStatus();
+        if (status.connected) {
             logger.info('Direct client is available');
             return true;
         } else {
@@ -39,24 +49,17 @@ export async function connectToElizaOSAgent(): Promise<boolean> {
 // Function to send a message to the ElizaOS agent
 export async function sendMessageToAgent(message: string): Promise<string> {
     try {
-        const baseUrl = '/api/direct';
-        const response = await fetch(`${baseUrl}/message`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                message,
-                sender: 'user',
-            }),
+        const response = await elizaClient.send({
+            content: message,
+            role: 'user',
+            useGoogleApi: true
         });
 
-        if (!response.ok) {
-            throw new Error(`Failed to send message: ${response.statusText}`);
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to send message');
         }
 
-        const data = await response.json() as MessageResponse;
-        return data.response || 'No response from agent';
+        return response.content || 'No response from agent';
     } catch (error) {
         logger.error('Error sending message to agent:', error);
         return 'Sorry, there was an error processing your message. Please try again later.';
@@ -66,15 +69,8 @@ export async function sendMessageToAgent(message: string): Promise<string> {
 // Function to get conversation history
 export async function getConversationHistory(): Promise<any[]> {
     try {
-        const baseUrl = '/api/direct';
-        const response = await fetch(`${baseUrl}/history`);
-
-        if (!response.ok) {
-            throw new Error(`Failed to get history: ${response.statusText}`);
-        }
-
-        const data = await response.json() as HistoryResponse;
-        return data.history || [];
+        const history = await elizaClient.getHistory();
+        return history.messages || [];
     } catch (error) {
         logger.error('Error getting conversation history:', error);
         return [];

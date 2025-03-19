@@ -1,0 +1,23 @@
+{
+    "name": "AIAgent",
+    "description": "An AI agent with Google API integration",
+    "modelProvider": "google",
+    "clients": [
+        "direct"
+    ],
+    "plugins": [
+        "@elizaos/client-direct"
+    ],
+    "config": {
+        "google": {
+            "apiKey": "${GOOGLE_API_KEY}",
+            "projectId": "${GOOGLE_PROJECT_ID}",
+            "region": "${GOOGLE_REGION}"
+        },
+        "direct": {
+            "endpoint": "${ELIZAOS_ENDPOINT}",
+            "apiKey": "${ELIZAOS_API_KEY}",
+            "model": "${ELIZAOS_MODEL}"
+        }
+    }
+}
