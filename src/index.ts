@@ -237,6 +237,26 @@ const rootHandler = (req: express.Request, res: express.Response): void => {
           if (e.key === 'Enter') sendMessage();
         });
         
+        // Test if direct client is available
+        async function checkDirectClientStatus() {
+          try {
+            const response = await fetch('/api/direct/status');
+            if (response.ok) {
+              console.log('ElizaOS direct client is available');
+              addMessage('Direct client is available. You can now chat with the ElizaOS agent.', 'system');
+              return true;
+            } else {
+              console.error('Direct client not available');
+              addMessage('Direct client is not available. Using simulated responses.', 'system');
+              return false;
+            }
+          } catch (error) {
+            console.error('Error connecting to direct client:', error);
+            addMessage('Could not connect to ElizaOS agent. Using simulated responses.', 'system');
+            return false;
+          }
+        }
+        
         async function sendMessage() {
           const message = userInput.value.trim();
           if (!message) return;
@@ -255,32 +275,61 @@ const rootHandler = (req: express.Request, res: express.Response): void => {
           messagesContainer.appendChild(loadingDiv);
           
           try {
-            // Send message to backend API
-            const response = await fetch('/api/message', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ message }),
-            });
+            // Try to send to direct client first
+            let responseText = null;
             
-            if (!response.ok) {
-              throw new Error('Failed to get response');
+            try {
+              // Send to the ElizaOS direct client
+              const directResponse = await fetch('/api/direct/message', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  message: message,
+                  sender: 'user'
+                }),
+              });
+              
+              if (directResponse.ok) {
+                const data = await directResponse.json();
+                responseText = data.response || data.text || data.message;
+              }
+            } catch (directError) {
+              console.log('Direct client unavailable, falling back to simulated response');
             }
             
-            const data = await response.json();
+            // Remove loading indicator
+            if (messagesContainer.contains(loadingDiv)) {
+              messagesContainer.removeChild(loadingDiv);
+            }
             
-            // Show initial response
-            addMessage(data.message, 'assistant');
-            
-            // Poll for the actual response if we received a messageId
-            if (data.messageId) {
-              pollForResponse(data.messageId, loadingDiv);
-            } else {
-              // Remove loading indicator if we won't be polling
-              if (messagesContainer.contains(loadingDiv)) {
-                messagesContainer.removeChild(loadingDiv);
+            // If direct client failed, use our simulated response
+            if (!responseText) {
+              const response = await fetch('/api/message', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message }),
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to get response');
               }
+              
+              const data = await response.json();
+              
+              // Show initial response
+              addMessage(data.message, 'assistant');
+              
+              // Poll for the actual response if we received a messageId
+              if (data.messageId) {
+                pollForResponse(data.messageId);
+              }
+            } else {
+              // Add the direct client response
+              addMessage(responseText, 'assistant');
             }
           } catch (error) {
             // Remove loading indicator
@@ -294,7 +343,7 @@ const rootHandler = (req: express.Request, res: express.Response): void => {
           }
         }
         
-        async function pollForResponse(messageId, loadingDiv) {
+        async function pollForResponse(messageId) {
           try {
             // Check for response
             const response = await fetch('/api/response/' + messageId);
@@ -315,7 +364,7 @@ const rootHandler = (req: express.Request, res: express.Response): void => {
               addMessage(data.message, 'assistant');
             } else {
               // Continue polling
-              setTimeout(() => pollForResponse(messageId, loadingDiv), 1000);
+              setTimeout(() => pollForResponse(messageId), 1000);
             }
           } catch (error) {
             console.error('Error polling for response:', error);
@@ -340,6 +389,9 @@ const rootHandler = (req: express.Request, res: express.Response): void => {
           // Scroll to bottom
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
+        
+        // Check direct client status on page load
+        checkDirectClientStatus();
       </script>
     </body>
     </html>
